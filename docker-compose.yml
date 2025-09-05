@@ -1,0 +1,89 @@
+services:
+  # Application Java - Jeu de la Vie
+  gamelife-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gamelife-java-app
+    environment:
+      - JAVA_OPTS=-Xmx256m -Xms128m
+      - APP_MODE=web
+    ports:
+      - "8080:8080"
+    networks:
+      - gamelife-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/game/state"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.example.service=gamelife-app"
+      - "com.example.description=Conway's Game of Life Java Application"
+
+  # Reverse Proxy Nginx
+  gamelife-nginx:
+    image: nginx:alpine
+    container_name: gamelife-nginx
+    ports:
+      - "8090:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - gamelife-app
+    networks:
+      - gamelife-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "com.example.service=gamelife-nginx"
+      - "com.example.description=Nginx reverse proxy for Game of Life"
+
+  # Service de monitoring (optionnel)
+  gamelife-monitor:
+    image: alpine:latest
+    container_name: gamelife-monitor
+    command: |
+      sh -c "
+        apk add --no-cache curl &&
+        while true; do
+          echo '[$(date)] Checking application health...'
+          if curl -f http://gamelife-nginx/health > /dev/null 2>&1; then
+            echo '[$(date)] ✓ Application is healthy'
+          else
+            echo '[$(date)] ✗ Application health check failed'
+          fi
+          sleep 60
+        done
+      "
+    depends_on:
+      - gamelife-nginx
+      - gamelife-app
+    networks:
+      - gamelife-network
+    restart: unless-stopped
+    labels:
+      - "com.example.service=gamelife-monitor"
+      - "com.example.description=Health monitoring for Game of Life"
+
+# Réseaux
+networks:
+  gamelife-network:
+    driver: bridge
+    labels:
+      - "com.example.network=gamelife"
+
+# Volumes
+volumes:
+  nginx-logs:
+    driver: local
+    labels:
+      - "com.example.volume=nginx-logs"
