@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de la Vie de Conway</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Jeu de la Vie de Conway</h1>
+        
+        <div class="game-area">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="generation">0</div>
+                    <div class="stat-label">Génération</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="liveCells">0</div>
+                    <div class="stat-label">Cellules Vivantes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="survivalRate">0%</div>
+                    <div class="stat-label">Taux de Survie</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" onclick="nextGeneration()" title="Espace">
+                    ⏭️ Génération Suivante
+                </button>
+                <button class="btn-success" id="autoBtn" onclick="toggleAutoPlay()" title="Entrée">
+                    ▶️ Lecture Auto
+                </button>
+                <button class="btn-secondary" onclick="reset()" title="R">
+                    🔄 Reset
+                </button>
+                <button class="btn-secondary" onclick="randomize()" title="A">
+                    🎲 Aléatoire
+                </button>
+                <button class="btn-secondary" onclick="setPattern()" title="P">
+                    🎯 Pattern Initial
+                </button>
+            </div>
+            
+            <div class="speed-control">
+                <span>Lent</span>
+                <input type="range" class="speed-slider" id="speedSlider" 
+                       min="100" max="2000" value="1000" step="100">
+                <span>Rapide</span>
+            </div>
+            
+            <div class="grid-container">
+                <div class="grid" id="grid"></div>
+            </div>
+            
+            <div class="keyboard-hints">
+                💡 <strong>Raccourcis:</strong> Espace = Génération suivante | Entrée = Auto/Stop | R = Reset | A = Aléatoire | P = Pattern
+            </div>
+        </div>
+    </div>
+    
+    <script src="/js/game.js"></script>
+</body>
+</html>

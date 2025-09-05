@@ -16,12 +16,16 @@ Cette implémentation utilise une grille 5x5 et propose deux modes d'interaction
 # Cloner et accéder au projet
 cd gamelife
 
-# Démarrer l'application
+# Démarrer l'application web
 docker-compose up -d
 
 # Accéder à l'interface web
 # http://localhost:8090 (via Nginx)
 # http://localhost:8080 (direct Java)
+
+# OU démarrer en mode console interactif
+docker-compose down
+docker run -it gamelife-gamelife-app console
 ```
 
 ### Sans Docker
@@ -47,6 +51,12 @@ gamelife/
 │   ├── GameOfLifeConsole.java     # Interface console
 │   ├── GameOfLifeWebServer.java   # Serveur web + API REST
 │   └── Main.java                  # Point d'entrée
+├── web/                           # Interface utilisateur web
+│   ├── index.html                 # Page principale
+│   ├── css/
+│   │   └── styles.css             # Styles CSS
+│   └── js/
+│       └── game.js                # Logique JavaScript
 ├── nginx/
 │   └── nginx.conf                 # Configuration Nginx
 ├── Dockerfile                     # Image Java
@@ -59,11 +69,12 @@ gamelife/
 
 ### Mode Console
 - Interface interactive en ligne de commande
-- Affichage ASCII de la grille
+- Affichage ASCII de la grille (█ = vivant, ░ = mort)
 - Contrôles manuels (génération par génération)
 - Mode automatique avec évolution continue
 - Modification manuelle des cellules
 - Statistiques en temps réel
+- Patterns prédéfinis (Blinker)
 
 ### Mode Web
 - Interface graphique intuitive
@@ -110,7 +121,7 @@ make rebuild       # Reconstruction complète
 ## 🐳 Services Docker
 
 - **gamelife-app** : Application Java (port 8080)
-- **gamelife-nginx** : Reverse proxy Nginx (port 80)
+- **gamelife-nginx** : Reverse proxy Nginx (port 8090)
 - **gamelife-monitor** : Surveillance de santé
 
 ## 🎮 Utilisation
@@ -118,7 +129,11 @@ make rebuild       # Reconstruction complète
 ### Interface Console
 
 ```bash
+# Mode local
 make console
+
+# Mode Docker (console interactive)
+docker run -it gamelife-gamelife-app console
 ```
 
 Commandes disponibles :
@@ -183,7 +198,7 @@ make web
 
 # Test Docker
 make run
-# Puis ouvrir http://localhost
+# Puis ouvrir http://localhost:8090
 ```
 
 ## 📝 Notes Techniques

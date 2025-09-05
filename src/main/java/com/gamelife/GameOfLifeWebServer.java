@@ -8,6 +8,9 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.concurrent.Executors;
 
 /**
@@ -177,17 +180,69 @@ public class GameOfLifeWebServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String path = exchange.getRequestURI().getPath();
+            
+            // Rediriger la racine vers index.html
             if ("/".equals(path)) {
                 path = "/index.html";
             }
             
-            // Contenu HTML simple inclus directement
-            if ("/index.html".equals(path)) {
-                String html = getIndexHtml();
-                sendResponse(exchange, 200, html, "text/html");
+            // Servir les fichiers depuis le dossier web
+            String filePath = "web" + path;
+            Path file = Paths.get(filePath);
+            
+            if (Files.exists(file) && !Files.isDirectory(file)) {
+                try {
+                    byte[] content = Files.readAllBytes(file);
+                    String contentType = getContentType(path);
+                    
+                    exchange.getResponseHeaders().set("Content-Type", contentType);
+                    exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                    exchange.sendResponseHeaders(200, content.length);
+                    
+                    try (OutputStream os = exchange.getResponseBody()) {
+                        os.write(content);
+                    }
+                } catch (IOException e) {
+                    sendResponse(exchange, 500, "Erreur serveur", "text/plain");
+                }
             } else {
-                sendResponse(exchange, 404, "Not Found", "text/plain");
+                // Fichier non trouvé, servir une page 404 simple
+                String notFoundHtml = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>404 - Page Non Trouvée</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                            h1 { color: #e74c3c; }
+                            a { color: #3498db; text-decoration: none; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>404 - Page Non Trouvée</h1>
+                        <p>Le fichier demandé n'existe pas.</p>
+                        <a href="/">← Retour au Jeu de la Vie</a>
+                    </body>
+                    </html>
+                    """;
+                sendResponse(exchange, 404, notFoundHtml, "text/html");
             }
+        }
+        
+        /**
+         * Détermine le type MIME basé sur l'extension du fichier
+         */
+        private String getContentType(String path) {
+            if (path.endsWith(".html")) return "text/html; charset=utf-8";
+            if (path.endsWith(".css")) return "text/css; charset=utf-8";
+            if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
+            if (path.endsWith(".json")) return "application/json; charset=utf-8";
+            if (path.endsWith(".png")) return "image/png";
+            if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+            if (path.endsWith(".gif")) return "image/gif";
+            if (path.endsWith(".svg")) return "image/svg+xml";
+            if (path.endsWith(".ico")) return "image/x-icon";
+            return "application/octet-stream";
         }
     }
     
@@ -224,242 +279,5 @@ public class GameOfLifeWebServer {
         int end = json.indexOf(",", start);
         if (end == -1) end = json.indexOf("}", start);
         return Boolean.parseBoolean(json.substring(start, end).trim());
-    }
-    
-    /**
-     * Retourne le contenu HTML de l'interface web
-     */
-    private String getIndexHtml() {
-        return """
-            <!DOCTYPE html>
-            <html lang="fr">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Jeu de la Vie</title>
-                <style>
-                    body { 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        max-width: 800px; 
-                        margin: 0 auto; 
-                        padding: 20px;
-                        background-color: #f5f5f5;
-                    }
-                    .container {
-                        background: white;
-                        padding: 20px;
-                        border-radius: 10px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }
-                    h1 { 
-                        text-align: center; 
-                        color: #333; 
-                        margin-bottom: 30px;
-                    }
-                    .grid { 
-                        display: grid; 
-                        grid-template-columns: repeat(5, 50px); 
-                        gap: 2px; 
-                        margin: 20px auto; 
-                        justify-content: center;
-                    }
-                    .cell { 
-                        width: 50px; 
-                        height: 50px; 
-                        border: 2px solid #ddd; 
-                        cursor: pointer; 
-                        transition: all 0.2s ease;
-                        border-radius: 4px;
-                    }
-                    .alive { 
-                        background-color: #2c3e50; 
-                        border-color: #34495e;
-                    }
-                    .dead { 
-                        background-color: #ecf0f1; 
-                        border-color: #bdc3c7;
-                    }
-                    .cell:hover {
-                        transform: scale(1.1);
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    }
-                    .controls { 
-                        text-align: center;
-                        margin: 30px 0; 
-                    }
-                    button { 
-                        margin: 5px; 
-                        padding: 12px 20px; 
-                        font-size: 14px;
-                        border: none;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        transition: background-color 0.2s ease;
-                        font-weight: 500;
-                    }
-                    .btn-primary {
-                        background-color: #3498db;
-                        color: white;
-                    }
-                    .btn-primary:hover {
-                        background-color: #2980b9;
-                    }
-                    .btn-secondary {
-                        background-color: #95a5a6;
-                        color: white;
-                    }
-                    .btn-secondary:hover {
-                        background-color: #7f8c8d;
-                    }
-                    .btn-success {
-                        background-color: #27ae60;
-                        color: white;
-                    }
-                    .btn-success:hover {
-                        background-color: #229954;
-                    }
-                    .btn-danger {
-                        background-color: #e74c3c;
-                        color: white;
-                    }
-                    .btn-danger:hover {
-                        background-color: #c0392b;
-                    }
-                    .stats { 
-                        margin: 20px 0; 
-                        padding: 15px; 
-                        background: #f8f9fa; 
-                        border-radius: 6px;
-                        border-left: 4px solid #3498db;
-                    }
-                    .stats div {
-                        margin: 8px 0;
-                        font-size: 16px;
-                    }
-                    .stats strong {
-                        color: #2c3e50;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>Jeu de la Vie de Conway - 5x5</h1>
-                    
-                    <div class="controls">
-                        <button class="btn-primary" onclick="nextGeneration()">Generation Suivante</button>
-                        <button class="btn-success" onclick="autoPlay()">Lecture Auto</button>
-                        <button class="btn-danger" onclick="stopAuto()">Arreter</button>
-                        <button class="btn-secondary" onclick="reset()">Reset</button>
-                        <button class="btn-secondary" onclick="randomize()">Aleatoire</button>
-                        <button class="btn-secondary" onclick="setPattern()">Pattern Initial</button>
-                    </div>
-                    
-                    <div class="stats">
-                        <div><strong>Generation:</strong> <span id="generation">0</span></div>
-                        <div><strong>Cellules vivantes:</strong> <span id="liveCells">0</span>/25</div>
-                        <div><strong>Taux de survie:</strong> <span id="survivalRate">0</span>%</div>
-                    </div>
-                    
-                    <div class="grid" id="grid"></div>
-                </div>
-                
-                <script>
-                let autoPlayInterval = null;
-                
-                async function fetchGameState() {
-                    const response = await fetch('/api/game/state');
-                    return await response.json();
-                }
-                
-                async function updateDisplay() {
-                    const state = await fetchGameState();
-                    document.getElementById('generation').textContent = state.generation;
-                    document.getElementById('liveCells').textContent = state.liveCells;
-                    
-                    const survivalRate = Math.round((state.liveCells / 25) * 100);
-                    document.getElementById('survivalRate').textContent = survivalRate;
-                    
-                    const grid = document.getElementById('grid');
-                    grid.innerHTML = '';
-                    
-                    for (let i = 0; i < 5; i++) {
-                        for (let j = 0; j < 5; j++) {
-                            const cell = document.createElement('div');
-                            cell.className = 'cell ' + (state.grid[i][j] ? 'alive' : 'dead');
-                            cell.onclick = () => toggleCell(i, j);
-                            cell.title = `Cellule (${i},${j})`;
-                            grid.appendChild(cell);
-                        }
-                    }
-                }
-                
-                async function nextGeneration() {
-                    await fetch('/api/game/next', { method: 'POST' });
-                    updateDisplay();
-                }
-                
-                async function reset() {
-                    await fetch('/api/game/reset', { method: 'POST' });
-                    updateDisplay();
-                }
-                
-                async function randomize() {
-                    await fetch('/api/game/random', { method: 'POST' });
-                    updateDisplay();
-                }
-                
-                async function setPattern() {
-                    await fetch('/api/game/pattern', { method: 'POST' });
-                    updateDisplay();
-                }
-                
-                async function toggleCell(row, col) {
-                    const state = await fetchGameState();
-                    const newState = !state.grid[row][col];
-                    
-                    await fetch('/api/game/cell', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ row, col, alive: newState })
-                    });
-                    
-                    updateDisplay();
-                }
-                
-                function autoPlay() {
-                    if (autoPlayInterval) return;
-                    autoPlayInterval = setInterval(nextGeneration, 1000);
-                    
-                    // Changer le style du bouton
-                    const btn = event.target;
-                    btn.textContent = 'En cours...';
-                    btn.style.backgroundColor = '#f39c12';
-                }
-                
-                function stopAuto() {
-                    if (autoPlayInterval) {
-                        clearInterval(autoPlayInterval);
-                        autoPlayInterval = null;
-                        
-                        // Restaurer le bouton
-                        const autoBtn = document.querySelector('.btn-success');
-                        autoBtn.textContent = 'Lecture Auto';
-                        autoBtn.style.backgroundColor = '#27ae60';
-                    }
-                }
-                
-                // Initialisation
-                updateDisplay();
-                
-                // Mise à jour automatique toutes les 5 secondes si pas en auto-play
-                setInterval(() => {
-                    if (!autoPlayInterval) {
-                        updateDisplay();
-                    }
-                }, 5000);
-                </script>
-            </body>
-            </html>
-            """;
     }
 }

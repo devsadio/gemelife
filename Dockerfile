@@ -7,6 +7,9 @@ WORKDIR /app
 # Copier les fichiers source
 COPY src/ /app/src/
 
+# Copier les fichiers web
+COPY web/ /app/web/
+
 # Créer le répertoire build
 RUN mkdir -p /app/build
 
